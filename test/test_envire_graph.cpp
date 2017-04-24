@@ -333,6 +333,27 @@ BOOST_AUTO_TEST_CASE(get_first_item_on_empty_graph_test)
     BOOST_CHECK_THROW(g.getItem<Item<string>>(frame, 11), UnknownFrameException);
 }
 
+
+BOOST_AUTO_TEST_CASE(get_item_by_uuid_test)
+{
+	EnvireGraph g;
+	Item<string>::Ptr item(new Item<string>( "Just.. something." ));
+	Item<string>::Ptr item2(new Item<string>( "Just.. something.. else." ));
+
+	FrameId frameA = "A";
+	FrameId frameB = "B";
+	g.addFrame( frameA );
+	g.addFrame( frameB );
+
+	g.addItemToFrame( frameA, item );
+	g.addItemToFrame( frameB, item2 );
+
+	// find item by uuid
+	EnvireGraph::ItemIterator<Item<string> > it = g.getItemByID<Item<string> >( item->getID() );
+	BOOST_CHECK( &*it == &*item );
+}
+
+
 BOOST_AUTO_TEST_CASE(clear_frame_test)
 {
     FrameId frame = "frame";

@@ -105,9 +105,18 @@ namespace envire { namespace core
         explicit UnknownItemException(const FrameId& name, const boost::uuids::uuid& uuid) :
           msg("The item with uuid '" + boost::uuids::to_string(uuid) + 
               "' is not part of frame '" + name + "'") {}
+		explicit UnknownItemException(const boost::uuids::uuid& uuid) :
+		  msg("The item with uuid '" + boost::uuids::to_string(uuid) +
+			  "' could not be found in the graph.") {}
+		explicit UnknownItemException(const std::string& uuid) :
+		  msg("The item with uuid '" + uuid +
+			  "' could not be found in the graph.") {}
         virtual char const * what() const throw() { return msg.c_str(); }
         const std::string msg;
     };
+
+
+
 
     class FrameStillConnectedException : public std::exception
     {

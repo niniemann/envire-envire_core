@@ -36,11 +36,17 @@
 #include <typeinfo>
 #include <type_traits>
 #include <unordered_set>
+#include <map>
 
 #define BOOST_RESULT_OF_USE_DECLTYPE //this is important for the transform_iterator
 #include <boost/iterator/transform_iterator.hpp>
 #include <boost_serialization/BoostTypes.hpp>
+#include <boost/serialization/map.hpp>
+#include <boost/serialization/shared_ptr.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/uuid/uuid.hpp>
+
+
 
 
 namespace envire { namespace core {
@@ -51,7 +57,7 @@ class EnvireGraph : public TransformGraph<Frame>
 public:
     using FRAME_PROP = Frame;
     using Base = TransformGraph<Frame>;
-  
+
     /**Iterator used to down cast from ItemBase::Ptr to @p T::Ptr while
     * iterating. T has to derive from ItemBase for this to work.
     * The iterator returns a T&.
@@ -76,11 +82,11 @@ public:
     * be excluded from the resulted graph
     *
     */
-    EnvireGraph(const EnvireGraph &other, 
+    EnvireGraph(const EnvireGraph &other,
                 std::unordered_set<std::type_index> *filter_list, bool inclusive);
 
     EnvireGraph(const EnvireGraph &other);
-    
+
 
     /** Adds @p item to the item list in the frame of item
     *  Causes ItemAddedEvent.
@@ -98,25 +104,25 @@ public:
       * @note Invalidates all iterators of type ItemIterator<T> for the specified @p frame.
       * @return A pair of iterators. The first one points to the element that
       *         comes after @p item and the second one points to the end of the
-      *         list.*/ 
+      *         list.*/
     template <class T>
     ItemIteratorPair<T>
     removeItemFromFrame(const FrameId& frameId, ItemIterator<T> item);
-    
+
     /**Removes @p item from its frame.
-     * Causes ItemRemovedEvent. 
+     * Causes ItemRemovedEvent.
      * Sets @p item->frame_name to "" before causing the event.
      * @throw UnknownFrameException if @p item.frame is not part of this graph.
      * @throw UnknownItemException if @p item is not part of @p item.frame
      * @note Invalidates all iterators of type ItemIterator<item.getTypeIndex()>*/
     void removeItemFromFrame(const ItemBase::Ptr item);
-          
+
     /**Removes all items from @p frame.
     * Causes ItemRemovedEvent for each item that is removd.
     * @throw UnknownFrameException if the frame does not exist.*/
     void clearFrame(const FrameId& frame);
 
-    /** Adds @p item to the item list of the specified frame 
+    /** Adds @p item to the item list of the specified frame
     *  Causes ItemAddedEvent.
     *  @throw UnknownFrameException if the frame id is invalid
     *  @param frame The frame the item should be added to.
@@ -140,16 +146,16 @@ public:
      *  @throw NoItemsOfTypeInFrameException if no items of the type are in the frame*/
     const envire::core::Frame::ItemList& getItems(const vertex_descriptor frame,
                                                   const std::type_index& type) const;
-    /** @throw UnknownFrameException if @p frame is not part of this graph*/                                                  
+    /** @throw UnknownFrameException if @p frame is not part of this graph*/
     const envire::core::Frame::ItemList& getItems(const FrameId& frame,
                                                   const std::type_index& type) const;
-                                                  
+
     /**Visits all items in the given frame (ignoring the type).
      * @param func should be a callable with operator(const ItemBase::Ptr)
      * @throw UnknownFrameException if @p frame is not part of this graph */
     template <class T>
-    void visitItems(const FrameId& frame, T func) const;                                                  
-                                                  
+    void visitItems(const FrameId& frame, T func) const;
+
     /**Convenience method that returns an iterator to the @p i'th item of type @p T from @p frame.
       * @param T has to derive from ItemBase.
       * @throw UnknownFrameException if the @p frame id is invalid.
@@ -161,6 +167,16 @@ public:
     template <class T>
     const ItemIterator<T> getItem(const vertex_descriptor frame, const int i = 0) const;
 
+    /**Convenience method that returns an item by UUID
+      * @param T has to derive from ItemBase.
+      * @throw UnknownItemException if the item could not be found.
+      */
+
+    template <class T>
+    const boost::shared_ptr<T> getItemByID(const boost::uuids::uuid& uuid) const;
+    template <class T>
+    const boost::shared_ptr<T> getItemByID(const std::string& uuid) const;
+
     /** @return true if the @p frame contains at least one item of type @p T
       *  @param T should derive from ItemBase
       *  @throw UnknownFrameException if the @p frame id is invalid.*/
@@ -168,7 +184,7 @@ public:
     bool containsItems(const FrameId& frame) const;
     template <class T>
     bool containsItems(const vertex_descriptor frame) const;
-    /** @return true if @p frame contains at least one item of @p type. 
+    /** @return true if @p frame contains at least one item of @p type.
       *  @param type The described type should derive from ItemBase*/
     bool containsItems(const vertex_descriptor frame, const std::type_index& type) const;
     bool containsItems(const FrameId& frame, const std::type_index& type) const;
@@ -178,34 +194,34 @@ public:
     template <class T>
     size_t getItemCount(const FrameId& frame) const;
     template <class T>
-    size_t getItemCount(const vertex_descriptor vd) const;        
+    size_t getItemCount(const vertex_descriptor vd) const;
 
     /** @return the number of all items independent of their type in @p frame.
       *  @throw UnknownFrameException if the @p frame id is invalid.*/
     size_t getTotalItemCount(const FrameId& frame) const;
     size_t getTotalItemCount(const vertex_descriptor vd) const;
-    
-    
+
+
     /**Removes @p frame from the Graph.
     *  A frame can only be removed if there are no edges connected to
     *  or coming from that frame.
     *
     *  Causes FrameRemovedEvent.
     *  Causes ItemRemovedEvent for each item in the frame.
-    * 
-    * 
+    *
+    *
     *  @throw UnknownFrameException if the frame does not exist.
     *  @throw FrameStillConnectedException if there are still edges
     *                                      coming from or leading to this
     *                                      frame. */
     virtual void removeFrame(const FrameId& frame) override;
-    
+
     /**Stores the graph in @p file.
      * Boost serialization is used to store the graph.
      * @throw boost::archive::archive_exception if the serialization failed
      * @throw std::ios_base::failure if the file operation failed*/
     void saveToFile(const std::string& file) const;
-    
+
     /**Loads the graph from @p file.
      * Boost serialization is used to load the graph.
      * Only use this with files that have been created by saveToFile().
@@ -213,12 +229,12 @@ public:
      * @throw std::ios_base::failure if the file operation failed
      * FIXME I have no idea what happens when the graph already contains data*/
     void loadFromFile(const std::string& file);
-    
+
     /** Copies all frames and edges from this graph to @p target.
-     *  Excludes all items. 
+     *  Excludes all items.
      */
     void createStructuralCopy(EnvireGraph& target) const;
-    
+
 protected:
 
     /** @return A range that contains all items of type @p T in frame @p frame
@@ -227,11 +243,11 @@ protected:
     template<class T>
     const ItemIteratorPair<T>
     getItemsInternal(const vertex_descriptor frame, const FrameId& frameId) const;
-    
+
 
     /**Throws UnknownFrameException if @p frame is not part of this graph */
     void checkFrameValid(const FrameId& frame) const;
-    
+
     /**Assert that @p T derives from ItemBase */
     template <class T>
     void assertDerivesFromItemBase() const;
@@ -246,23 +262,27 @@ protected:
      *        Basically the reverse process of publishCurrentState
      */
     virtual void unpublishCurrentState(GraphEventSubscriber* pSubscriber);
-    
+
 private:
+    /**For fast lookup up Items by UUID**/
+    std::map<const std::string, ItemBase::Ptr> itemsByID;
+
     /**Grants access to boost serialization */
     friend class boost::serialization::access;
-    
+
     /**boost serialization method*/
     template <typename Archive>
     void serialize(Archive &ar, const unsigned int version);
-                                                            
+
 };
+
 
 
 template <class T>
 void EnvireGraph::assertDerivesFromItemBase() const
 {
     static_assert(std::is_base_of<ItemBase, T>::value,
-        "T should derive from ItemBase"); 
+        "T should derive from ItemBase");
 }
 
 
@@ -294,30 +314,30 @@ EnvireGraph::getItems(const vertex_descriptor frame) const
 {
     assertDerivesFromItemBase<T>();
     return getItemsInternal<T>(frame, getFrameId(frame));
-}  
+}
 
 template<class T>
 const EnvireGraph::ItemIteratorPair<T>
 EnvireGraph::getItemsInternal(const vertex_descriptor frame, const FrameId& frameId) const
 {
     assertDerivesFromItemBase<T>();
-    
+
     const Frame::ItemMap& items = graph()[frame].items;
     const std::type_index key(typeid(T));
-    
+
     if(items.find(key) == items.end())
     {
         ItemIterator<T> invalid;
         return std::make_pair(invalid, invalid);
     }
-    
+
     auto begin = items.at(key).begin();
     auto end = items.at(key).end();
     assert(begin != end); //if a list exists it should not be empty
-    
-    ItemIterator<T> beginIt(begin, ItemBaseCaster<T>()); 
-    ItemIterator<T> endIt(end, ItemBaseCaster<T>()); 
-    return std::make_pair(beginIt, endIt);        
+
+    ItemIterator<T> beginIt(begin, ItemBaseCaster<T>());
+    ItemIterator<T> endIt(end, ItemBaseCaster<T>());
+    return std::make_pair(beginIt, endIt);
 }
 
 template <class T>
@@ -333,10 +353,10 @@ template <class T>
 const EnvireGraph::ItemIterator<T> EnvireGraph::getItem(const vertex_descriptor frame, const int i) const
 {
     assertDerivesFromItemBase<T>();
-    
+
     if(i < 0)
     {
-       throw std::out_of_range("Out of range: " + boost::lexical_cast<std::string>(i)); 
+       throw std::out_of_range("Out of range: " + boost::lexical_cast<std::string>(i));
     }
     const Frame::ItemMap& items = graph()[frame].items;
     const std::type_index key(typeid(T));
@@ -350,8 +370,30 @@ const EnvireGraph::ItemIterator<T> EnvireGraph::getItem(const vertex_descriptor 
     {
       throw std::out_of_range("Out of range");
     }
-    return ItemIterator<T>(list.begin() + i, ItemBaseCaster<T>()); 
+    return ItemIterator<T>(list.begin() + i, ItemBaseCaster<T>());
 }
+
+
+template<class T>
+const boost::shared_ptr<T> EnvireGraph::getItemByID(const std::string& uuid) const
+{
+  assertDerivesFromItemBase<T>();
+  if (this->itemsByID.find(uuid) == this->itemsByID.end())
+  {
+    throw UnknownItemException(uuid);
+  }
+
+  return boost::dynamic_pointer_cast<T>( this->itemsByID.at(uuid) );
+}
+
+template <class T>
+const boost::shared_ptr<T> EnvireGraph::getItemByID(const boost::uuids::uuid& uuid) const
+{
+    std::string str = boost::uuids::to_string(uuid);
+    return this->getItemByID<T>(str);
+}
+
+
 
 template <class T>
 EnvireGraph::ItemIteratorPair<T>
@@ -360,7 +402,7 @@ EnvireGraph::removeItemFromFrame(const FrameId& frameId, ItemIterator<T> item)
     assertDerivesFromItemBase<T>();
     checkFrameValid(frameId);
     assert(frameId.compare(item->getFrame()) == 0);
-    
+
     Frame& frame = (*this)[frameId];
     const std::type_index key(typeid(T));
     auto mapEntry = frame.items.find(key);
@@ -373,16 +415,19 @@ EnvireGraph::removeItemFromFrame(const FrameId& frameId, ItemIterator<T> item)
     //HACK This is a workaround for gcc bug 57158.
     //     In C++11 the parameter type of vector::erase changed from iterator
     //     to const_iterator (which is exactly what we need), but  gcc has not
-    //     yet implemented that change. 
+    //     yet implemented that change.
     std::vector<ItemBase::Ptr>::iterator nonConstBaseIterator = items.begin() + (baseIterator - items.cbegin()); //vector iterator const cast hack
     ItemBase::Ptr deletedItem = *nonConstBaseIterator;//backup item so we can notify the user
     std::vector<ItemBase::Ptr>::const_iterator next = items.erase(nonConstBaseIterator);
     deletedItem->setFrame("");
     notify(ItemRemovedEvent(frameId, deletedItem));
-    
-    ItemIterator<T> nextIt(next, ItemBaseCaster<T>()); 
-    ItemIterator<T> endIt(items.cend(), ItemBaseCaster<T>()); 
-    
+
+    // also, update itemsByID
+    itemsByID.erase(deletedItem->getIDString());
+
+    ItemIterator<T> nextIt(next, ItemBaseCaster<T>());
+    ItemIterator<T> endIt(items.cend(), ItemBaseCaster<T>());
+
     //remove the map entry if there are no more values in the vector
     if(nextIt == endIt)
     {
@@ -391,10 +436,10 @@ EnvireGraph::removeItemFromFrame(const FrameId& frameId, ItemIterator<T> item)
       //to end() anyway.
       frame.items.erase(key);
     }
-    
+
     return std::make_pair(nextIt, endIt);
 }
-    
+
 template <class T>
 bool EnvireGraph::containsItems(const FrameId& frameId) const
 {
@@ -440,6 +485,7 @@ template <typename Archive>
 void EnvireGraph::serialize(Archive &ar, const unsigned int version)
 {
     ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(Base);
+    ar & itemsByID;
 }
 
 }}

@@ -33,9 +33,9 @@
 
 namespace envire { namespace core
 {
-    
-  
-  
+
+
+
     class InvalidPathException : public std::exception
     {
     public:
@@ -44,7 +44,7 @@ namespace envire { namespace core
         virtual char const * what() const throw() { return msg.c_str(); }
         const std::string msg;
     };
-    
+
     class EdgeAlreadyExistsException : public std::exception
     {
     public:
@@ -62,7 +62,7 @@ namespace envire { namespace core
         virtual char const * what() const throw() { return msg.c_str(); }
         const std::string msg;
     };
-    
+
     class UnknownEdgeException : public std::exception
     {
     public:
@@ -89,7 +89,7 @@ namespace envire { namespace core
         virtual char const * what() const throw() { return msg.c_str(); }
         const std::string msg;
     };
-    
+
     class FrameAlreadyExistsException : public std::exception
     {
     public:
@@ -98,13 +98,16 @@ namespace envire { namespace core
         virtual char const * what() const throw() { return msg.c_str(); }
         const std::string msg;
     };
-    
+
     class UnknownItemException : public std::exception
     {
     public:
         explicit UnknownItemException(const FrameId& name, const boost::uuids::uuid& uuid) :
-          msg("The item with uuid '" + boost::uuids::to_string(uuid) + 
+          msg("The item with uuid '" + boost::uuids::to_string(uuid) +
               "' is not part of frame '" + name + "'") {}
+        explicit UnknownItemException(const std::string& uuid) :
+          msg("The item with uuid '" + uuid + "' is not part of the graph.") {}
+          
         virtual char const * what() const throw() { return msg.c_str(); }
         const std::string msg;
     };
@@ -118,8 +121,8 @@ namespace envire { namespace core
               " before removing the frame") {}
         virtual char const * what() const throw() { return msg.c_str(); }
         const std::string msg;
-    };   
-        
+    };
+
     class NoItemsOfTypeInFrameException : public std::exception
     {
     public:
@@ -128,7 +131,7 @@ namespace envire { namespace core
         virtual char const * what() const throw() { return msg.c_str(); }
         const std::string msg;
     };
-    
+
     class NullVertexException : public std::exception
     {
     public:
@@ -137,8 +140,6 @@ namespace envire { namespace core
         virtual char const * what() const throw() { return msg.c_str(); }
         const std::string msg;
     };
-    
-    
+
+
 }}
-
-
